@@ -1,0 +1,29 @@
+From 5ea9763286eb43e01c4ef2f3db59e13367a77138 Mon Sep 17 00:00:00 2001
+From: jack zhang <jack.zhang@enea.com>
+Date: Mon, 17 Dec 2012 03:52:11 +0100
+Subject: [PATCH] LXCR-995 As an Enea sales person, I want LINX added to Enea
+ Linux 
+Signed-off-by: jack zhang <jack.zhang@enea.com>
+
+ Upstream-Status: Pending
+ For details, see LINXCR-1518
+---
+ liblinx/Makefile.am |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/liblinx/Makefile.am b/liblinx/Makefile.am
+index 8559e43..3ce47d6 100644
+--- a/liblinx/Makefile.am
++++ b/liblinx/Makefile.am
+@@ -47,7 +47,7 @@ dist_man7_MANS = $(LINXROOT)/doc/man7/linx.7
+ 
+ include $(LINXROOT)/flags.am
+ 
+-include_HEADERS = \
++nobase_include_HEADERS = \
+ 	$(LINXROOT)/include/linx.h \
+ 	$(LINXROOT)/include/linx_ioctl.h \
+ 	$(LINXROOT)/include/linx_socket.h \
+-- 
+1.7.5.4
+

@@ -1,0 +1,288 @@
+Use KERNEL_SRC and modules_install to get use of pokys build kernel modules.
+fix version.h problem.
+
+Signed-off-by: Anders Roxell <anders.roxell@enea.com>
+
+Upstream-status: Pending
+---
+diff -uNr a/cmcl/Makefile b/cmcl/Makefile
+--- a/cmcl/Makefile	2013-02-25 15:46:59.777325274 +0100
++++ b/cmcl/Makefile	2013-02-25 15:57:22.038398316 +0100
+@@ -3,8 +3,8 @@
+ LINX ?= $(CURDIR)/../../..
+ include $(LINX)/net/linx/config.mk
+ 
+-KERNEL_CODE := $(shell awk '/LINUX_VERSION_CODE/ {print $$3}' $(KERNEL)/include/linux/version.h)
+-VENDOR_VERSION := $(shell awk '/UTS_RELEASE/ {print $$3}' $(KERNEL)/include/linux/version.h)
++KERNEL_CODE := $(shell awk '/LINUX_VERSION_CODE/ {print $$3}' $(KERNEL_SRC)/include/generated/utsrelease.h)
++VENDOR_VERSION := $(shell awk '/UTS_RELEASE/ {print $$3}' $(KERNEL_SRC)/include/generated/utsrelease.h)
+ 
+ ifneq ($(VENDOR_VERSION), "")
+ 	EXTRA_CFLAGS += -DGFP_IS_INT
+@@ -38,15 +38,17 @@
+ 
+ linx_cmcl-y += cmcl.o
+ 
++SRC := $(shell pwd)
++
+ modules:
+-	$(XMAKE) ARCH=$(ARCH) V=$(V) -C $(KERNEL) M=`pwd` modules
++	$(XMAKE) ARCH=$(ARCH) V=$(V) -C $(KERNEL_SRC) M=$(SRC) modules
+ 	$(CP) linx_cmcl.ko ..
+ 
+ clean:
+-	$(XMAKE) ARCH=$(ARCH) V=$(V) -C $(KERNEL) M=`pwd` clean
++	$(XMAKE) ARCH=$(ARCH) V=$(V) -C $(KERNEL_SRC) M=$(SRC) clean
+ 	$(LINXRM) Module.symvers Module.markers modules.order ../linx_cmcl.ko
+ 
+-install: modules
+-	$(XMAKE) ARCH=$(ARCH) V=$(V) -C $(KERNEL) M=`pwd` modules_install
++modules_install: modules
++	$(XMAKE) ARCH=$(ARCH) V=$(V) -C $(KERNEL_SRC) M=$(SRC) modules_install
+ 	depmod
+ 
+diff -uNr a/config.mk b/config.mk
+--- a/config.mk	2013-02-25 15:46:59.781325113 +0100
++++ b/config.mk	2013-02-25 16:13:30.672459997 +0100
+@@ -3,7 +3,7 @@
+ # CROSS_COMPILE is cross compiler prefix (including full path)
+ CROSS_COMPILE ?=
+ # KERNEL is the path to your kernel sources
+-KERNEL ?=
++KERNEL_SRC ?=
+ 
+ # Host architecture
+ HOST_ARCH ?= $(patsubst i%86,i386,$(shell uname -m))
+@@ -26,13 +26,13 @@
+ endif
+ 
+ ifeq ($(ARCH),$(HOST_ARCH))
+-ifndef KERNEL
+-KERNEL := $(HOST_KERNEL)
++ifndef KERNEL_SRC
++KERNEL_SRC := $(HOST_KERNEL)
+ endif
+ else
+-ifndef KERNEL
++ifndef KERNEL_SRC
+ ifdef NEED_KERNEL
+-$(error Please define KERNEL.)
++$(error Please define KERNEL_SRC.)
+ endif
+ endif
+ endif
+@@ -53,8 +53,8 @@
+ ifdef CROSS_COMPILE
+ 	$(ECHO) "# CROSS_COMPILE=$(CROSS_COMPILE)"
+ endif
+-ifdef KERNEL
+-	$(ECHO) "# KERNEL=$(KERNEL)"
++ifdef KERNEL_SRC
++	$(ECHO) "# KERNEL_SRC=$(KERNEL_SRC)"
+ endif
+ ifdef VERBOSE
+ 	$(ECHO) "# VERBOSE=$(VERBOSE)"
+@@ -62,7 +62,7 @@
+ 	$(ECHO) "# VERBOSE=no"
+ endif
+ 
+-export ARCH CROSS_COMPILE KERNEL LINX
++export ARCH CROSS_COMPILE KERNEL_SRC LINX
+ 
+ .PHONY: echo_config
+ 
+@@ -117,5 +117,5 @@
+ # in the mercury linux distribution.
+ EXTRA_CFLAGS += -I$(KDIR)/arch/ppc -DRLNH_ALIGN_ANY
+ else # x86
+-KDIR  := /lib/modules/$(shell uname -r)/build
++KDIR  := /lib/modules/$(KERNEL_VERSION)/build
+ endif
+diff -uNr a/ecm/Makefile b/ecm/Makefile
+--- a/ecm/Makefile	2013-02-25 15:46:59.781325113 +0100
++++ b/ecm/Makefile	2013-02-25 16:11:13.754388313 +0100
+@@ -5,8 +5,8 @@
+ LINX ?= $(CURDIR)/../../..
+ include $(LINX)/net/linx/config.mk
+ 
+-KERNEL_CODE := $(shell awk '/LINUX_VERSION_CODE/ {print $$3}' $(KERNEL)/include/linux/version.h)
+-VENDOR_VERSION := $(shell awk '/UTS_RELEASE/ {print $$3}' $(KERNEL)/include/linux/version.h)
++KERNEL_CODE := $(shell awk '/LINUX_VERSION_CODE/ {print $$3}' $(KERNEL_SRC)/include/generated/utsrelease.h)
++VENDOR_VERSION := $(shell awk '/UTS_RELEASE/ {print $$3}' $(KERNEL_SRC)/include/generated/utsrelease.h)
+ 
+ ifneq ($(VENDOR_VERSION), "")
+ 	EXTRA_CFLAGS += -DGFP_IS_INT
+@@ -43,14 +43,16 @@
+ linx_eth_cm-y += ecm_rx.o
+ linx_eth_cm-y += ecm_kutils.o
+ 
++SRC := $(shell pwd)
++
+ modules:
+-	$(XMAKE) ARCH=$(ARCH) V=$(V) -C $(KERNEL) M=`pwd` modules
++	$(XMAKE) ARCH=$(ARCH) V=$(V) -C $(KERNEL_SRC) M=$(SRC) modules
+ 	$(CP) linx_eth_cm.ko ..
+ 
+ clean:
+-	$(XMAKE) ARCH=$(ARCH) V=$(V) -C $(KERNEL) M=`pwd` clean
++	$(XMAKE) ARCH=$(ARCH) V=$(V) -C $(KERNEL_SRC) M=$(SRC) clean
+ 	$(LINXRM) Module.symvers Module.markers modules.order ../linx_eth_cm.ko
+ 
+-install: modules
+-	$(XMAKE) ARCH=$(ARCH) V=$(V) -C $(KERNEL) M=`pwd` modules_install
++modules_install: modules
++	$(XMAKE) ARCH=$(ARCH) V=$(V) -C $(KERNEL_SRC) M=$(SRC) modules_install
+ 	depmod
+diff -uNr a/Makefile b/Makefile
+--- a/Makefile	2013-02-25 15:46:59.781325113 +0100
++++ b/Makefile	2013-02-25 15:53:22.752757899 +0100
+@@ -63,9 +63,9 @@
+ 2_6_11 := 132619
+ 
+ # Vendors version of kernel, needed to catch certain back patches
+-VENDOR_VERSION := $(shell awk '/UTS_RELEASE/ {print $$3}' $(KERNEL)/include/linux/version.h)
++VENDOR_VERSION := $(shell awk '/UTS_RELEASE/ {print $$3}' $(KERNEL_SRC)/include/generated/utsrelease.h)
+ # Main line kernel version
+-KERNEL_CODE    := $(shell awk '/LINUX_VERSION_CODE/ {print $$3}' $(KERNEL)/include/linux/version.h)
++KERNEL_CODE    := $(shell awk '/LINUX_VERSION_CODE/ {print $$3}' $(KERNEL_SRC)/include/generated/utsrelease.h)
+ 
+ #
+ # 'gt_or_eq'
+@@ -140,14 +140,16 @@
+ obj-y += riocm/
+ obj-y += cmcl/
+ 
++SRC := $(shell pwd)
++
+ modules:
+-	$(XMAKE) ARCH=$(ARCH) V=$(V) -C $(KERNEL) M=`pwd` modules
++	$(XMAKE) ARCH=$(ARCH) V=$(V) -C $(KERNEL_SRC) M=$(SRC) modules
+ 	$(CP) */*.ko .
+ clean:
+-	$(XMAKE) ARCH=$(ARCH) V=$(V) -C $(KERNEL) M=`pwd` clean
++	$(XMAKE) ARCH=$(ARCH) V=$(V) -C $(KERNEL_SRC) M=$(SRC) clean
+ 	$(LINXRM) Module.symvers Module.markers modules.order
+ 
+-install: modules
+-	$(XMAKE) ARCH=$(ARCH) V=$(V) -C $(KERNEL) M=`pwd` modules_install
++modules_install: modules
++	$(XMAKE) ARCH=$(ARCH) V=$(V) -C $(KERNEL_SRC) M=$(SRC) modules_install
+ 	depmod
+ 
+diff -uNr a/riocm/Makefile b/riocm/Makefile
+--- a/riocm/Makefile	2013-02-25 15:46:59.781325113 +0100
++++ b/riocm/Makefile	2013-02-25 16:05:33.381125565 +0100
+@@ -5,8 +5,8 @@
+ LINX ?= $(CURDIR)/../../..
+ include $(LINX)/net/linx/config.mk
+ 
+-KERNEL_CODE := $(shell awk '/LINUX_VERSION_CODE/ {print $$3}' $(KERNEL)/include/linux/version.h)
+-VENDOR_VERSION := $(shell awk '/UTS_RELEASE/ {print $$3}' $(KERNEL)/include/linux/version.h)
++KERNEL_CODE := $(shell awk '/LINUX_VERSION_CODE/ {print $$3}' $(KERNEL_SRC)/include/generated/utsrelease.h)
++VENDOR_VERSION := $(shell awk '/UTS_RELEASE/ {print $$3}' $(KERNEL_SRC)/include/generated/utsrelease.h)
+ 
+ ifneq ($(VENDOR_VERSION), "")
+ 	EXTRA_CFLAGS += -DGFP_IS_INT
+@@ -43,15 +43,17 @@
+ linx_rio_cm-y += rio_rx.o
+ linx_rio_cm-y += rio_kutils.o
+ 
++SRC := $(shell pwd)
++
+ modules:
+-	$(XMAKE) ARCH=$(ARCH) V=$(V) -C $(KERNEL) M=`pwd` modules
++	$(XMAKE) ARCH=$(ARCH) V=$(V) -C $(KERNEL_SRC) M=$(SRC) modules
+ 	$(CP) linx_rio_cm.ko ..
+ 
+ clean:
+-	$(XMAKE) ARCH=$(ARCH) V=$(V) -C $(KERNEL) M=`pwd` clean
++	$(XMAKE) ARCH=$(ARCH) V=$(V) -C $(KERNEL_SRC) M=$(SRC) clean
+ 	$(LINXRM) Module.symvers Module.markers modules.order ../linx_rio_cm.ko
+ 
+-install: modules
+-	$(XMAKE) ARCH=$(ARCH) V=$(V) -C $(KERNEL) M=`pwd` modules_install
++modules_install: modules
++	$(XMAKE) ARCH=$(ARCH) V=$(V) -C $(KERNEL_SRC) M=$(SRC) modules_install
+ 	depmod
+ 
+diff -uNr a/shmcm/Makefile b/shmcm/Makefile
+--- a/shmcm/Makefile	2013-02-25 15:46:59.781325113 +0100
++++ b/shmcm/Makefile	2013-02-25 16:03:58.113250295 +0100
+@@ -5,8 +5,8 @@
+ LINX ?= $(CURDIR)/../../..
+ include $(LINX)/net/linx/config.mk
+ 
+-KERNEL_CODE := $(shell awk '/LINUX_VERSION_CODE/ {print $$3}' $(KERNEL)/include/linux/version.h)
+-VENDOR_VERSION := $(shell awk '/UTS_RELEASE/ {print $$3}' $(KERNEL)/include/linux/version.h)
++KERNEL_CODE := $(shell awk '/LINUX_VERSION_CODE/ {print $$3}' $(KERNEL_SRC)/include/generated/utsrelease.h)
++VENDOR_VERSION := $(shell awk '/UTS_RELEASE/ {print $$3}' $(KERNEL_SRC)/include/generated/utsrelease.h)
+ 
+ ifneq ($(VENDOR_VERSION), "")
+ 	EXTRA_CFLAGS += -DGFP_IS_INT
+@@ -60,7 +60,7 @@
+ 		-I$(LINX)/net/linx/include \
+                 -I$(LINX)/net/linx/shmcm
+ 
+-INSTALLDIR = /lib/modules/`uname -r`/kernel/net/linx
++INSTALLDIR = /lib/modules/$(KERNEL_VERSION)/kernel/net/linx
+ MODULES = linx_shm_cm.ko
+ 
+ obj-m := linx_shm_cm.o
+@@ -70,15 +70,17 @@
+ linx_shm_cm-y += shmcm_tx.o
+ linx_shm_cm-y += shmcm_kutils.o
+ 
++SRC := $(shell pwd)
++
+ modules:
+-	$(XMAKE) ARCH=$(ARCH) V=$(V) -C $(KERNEL) M=`pwd` modules
++	$(XMAKE) ARCH=$(ARCH) V=$(V) -C $(KERNEL_SRC) M=$(SRC) modules
+ 	$(CP) linx_shm_cm.ko ..
+ 
+ clean:
+-	$(XMAKE) ARCH=$(ARCH) V=$(V) -C $(KERNEL) M=`pwd` clean
++	$(XMAKE) ARCH=$(ARCH) V=$(V) -C $(KERNEL_SRC) M=$(SRC) clean
+ 	$(LINXRM) Module.symvers Module.markers modules.order ../linx_shm_cm.ko
+ 
+-install: modules
+-	$(XMAKE) ARCH=$(ARCH) V=$(V) -C $(KERNEL) M=`pwd` modules_install
++modules_install: modules
++	$(XMAKE) ARCH=$(ARCH) V=$(V) -C $(KERNEL_SRC) M=$(SRC) modules_install
+ 	depmod
+ 
+diff -uNr a/tcp_cm/Makefile b/tcp_cm/Makefile
+--- a/tcp_cm/Makefile	2013-02-25 15:46:59.781325113 +0100
++++ b/tcp_cm/Makefile	2013-02-25 16:10:09.097187839 +0100
+@@ -3,8 +3,8 @@
+ LINX ?= $(CURDIR)/../../..
+ include $(LINX)/net/linx/config.mk
+ 
+-KERNEL_CODE := $(shell awk '/LINUX_VERSION_CODE/ {print $$3}' $(KERNEL)/include/linux/version.h)
+-VENDOR_VERSION := $(shell awk '/UTS_RELEASE/ {print $$3}' $(KERNEL)/include/linux/version.h)
++KERNEL_CODE := $(shell awk '/LINUX_VERSION_CODE/ {print $$3}' $(KERNEL_SRC)/include/generated/utsrelease.h)
++VENDOR_VERSION := $(shell awk '/UTS_RELEASE/ {print $$3}' $(KERNEL_SRC)/include/generated/utsrelease.h)
+ 
+ ifneq ($(VENDOR_VERSION), "")
+ 	EXTRA_CFLAGS += -DGFP_IS_INT
+@@ -38,15 +38,17 @@
+ 
+ linx_tcp_cm-y += tcp_cm.o
+ 
++SRC := $(shell pwd)
++
+ modules:
+-	$(XMAKE) ARCH=$(ARCH) V=$(V) -C $(KERNEL) M=`pwd` modules
++	$(XMAKE) ARCH=$(ARCH) V=$(V) -C $(KERNEL_SRC) M=$(SRC) modules
+ 	$(CP) linx_tcp_cm.ko ..
+ 
+ clean:
+-	$(XMAKE) ARCH=$(ARCH) V=$(V) -C $(KERNEL) M=`pwd` clean
++	$(XMAKE) ARCH=$(ARCH) V=$(V) -C $(KERNEL_SRC) M=$(SRC) clean
+ 	$(LINXRM) Module.symvers Module.markers modules.order ../linx_tcp_cm.ko
+ 
+-install: modules
+-	$(XMAKE) ARCH=$(ARCH) V=$(V) -C $(KERNEL) M=`pwd` modules_install
++modules_install: modules
++	$(XMAKE) ARCH=$(ARCH) V=$(V) -C $(KERNEL_SRC) M=$(SRC) modules_install
+ 	depmod
+ 

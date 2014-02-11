@@ -1,0 +1,206 @@
+From 20294330f08283d28b6092b568156e29b1792328 Mon Sep 17 00:00:00 2001
+From: Adrian Dudau <adrian.dudau@enea.com>
+Date: Thu, 12 Dec 2013 11:23:24 +0100
+Subject: [PATCH] support for 3.11 kernel versions
+
+Fixed NULL pointer dereference in ecm_conn.c
+
+Signed-off-by: Adrian Dudau <adrian.dudau@enea.com>
+---
+ cfg/db_proc.c  | 23 ++++++++++++++++++-----
+ ecm/ecm_conn.c | 11 ++++++++---
+ ipc/hunt.c     | 24 ++++++++++++++++++++++++
+ 3 files changed, 50 insertions(+), 8 deletions(-)
+
+diff --git a/cfg/db_proc.c b/cfg/db_proc.c
+index c062a3d..bad0353 100644
+--- a/cfg/db_proc.c
++++ b/cfg/db_proc.c
+@@ -41,6 +41,12 @@
+ #include "db_format.h"
+ #include <asm/uaccess.h>
+ 
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0))
++#define PDE_INODE_NAME(inode) PDE_DATA(inode)
++#else
++#define PDE_INODE_NAME(inode) PDE(inode)->name
++#endif
++
+ struct db_seq {
+ 	const struct db_template *template;
+         struct list_head *list;
+@@ -148,11 +154,11 @@ static int db_proc_open(struct inode *inode, struct file *file)
+ 	if (status != 0)
+                 goto out_20;
+ 
+-        status = db_template_get(PDE(inode)->name, &p->template);
++        status = db_template_get(PDE_INODE_NAME(inode), &p->template);
+         if (status != 0)
+                 goto out_20;
+ 
+-        status = db_list_get(PDE(inode)->name, &p->list);
++        status = db_list_get(PDE_INODE_NAME(inode), &p->list);
+         if (status != 0)
+                 goto out_10;
+ 
+@@ -161,7 +167,7 @@ static int db_proc_open(struct inode *inode, struct file *file)
+ 	return 0;
+ 
+   out_10:
+-        db_template_put(PDE(inode)->name, &p->template);
++        db_template_put(PDE_INODE_NAME(inode), &p->template);
+   out_20:
+         kfree(p);
+         return status;
+@@ -217,11 +223,11 @@ static int db_proc_release(struct inode *inode, struct file *file)
+ 	s = file->private_data;
+ 	p = s->private;
+ 
+-        status = db_list_put(PDE(inode)->name, &p->list);
++        status = db_list_put(PDE_INODE_NAME(inode), &p->list);
+         if (status != 0)
+                 return status;
+ 
+-        status = db_template_put(PDE(inode)->name, &p->template);
++        status = db_template_put(PDE_INODE_NAME(inode), &p->template);
+         if (status != 0)
+                 return status;
+ 
+@@ -258,14 +264,21 @@ int db_proc_add(const char *name)
+ {
+         struct proc_dir_entry *pde;
+ 
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0)
++	pde = proc_create_data(name, 0777, db_proc_root,
++			       &db_proc_file_ops, (void *)name);
++#else
+         pde = create_proc_entry(name, 0777, db_proc_root);
++#endif
+         if (pde == NULL)
+                 return -EINVAL;
+ 
+ #if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 29)
+ 	pde->owner = THIS_MODULE;
+ #endif
++#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 10, 0)
+         pde->proc_fops = &db_proc_file_ops;
++#endif
+         return 0;
+ }
+ EXPORT_SYMBOL(db_proc_add);
+diff --git a/ecm/ecm_conn.c b/ecm/ecm_conn.c
+index aaf5161..b81abd1 100644
+--- a/ecm/ecm_conn.c
++++ b/ecm/ecm_conn.c
+@@ -905,8 +905,9 @@ static void free_ecm_connection(struct RlnhLinkObj *co)
+ {
+         /* Undo alloc_ecm_connection(). */
+         if (co != NULL) {
+-		if (list_empty(&co->ecm_dev->conn_list))
+-			dev_remove_pack(&co->ecm_dev->pt);
++		if (co->ecm_dev != NULL)
++			if (list_empty(&co->ecm_dev->conn_list))
++				dev_remove_pack(&co->ecm_dev->pt); 
+                 if (co->con_name != NULL)
+                         kfree(co->con_name);
+                 if (co->dev_name != NULL)
+@@ -1315,7 +1316,11 @@ static int net_event(struct notifier_block *nb, unsigned long event, void *data)
+         struct ecm_work_net_event *p;
+ 
+         (void)nb;
+-        dev = data;
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,11,0))
++ 	dev = netdev_notifier_info_to_dev(data);
++#else
++	dev = data;
++#endif
+ 
+         w = alloc_ecm_work(sizeof(*p), ECM_WORK_NET_EVENT, GFP_KERNEL);
+         if (w == NULL)
+diff --git a/ipc/hunt.c b/ipc/hunt.c
+index 843a893..f4564eb 100644
+--- a/ipc/hunt.c
++++ b/ipc/hunt.c
+@@ -743,7 +743,9 @@ static inline struct sock *__locate_name(const char *name,
+ 					 unsigned hash, uint32_t hunter_spid)
+ {
+ 	struct sock *s, *s_found = NULL;
++#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,9,0))
+ 	struct hlist_node *node;
++#endif
+ 
+ 	linx_trace_enter(LINX_TRACEGROUP_IPC,
+ 			 "%s, %d, 0x%x, 0x%x", name, len, hash, hunter_spid);
+@@ -753,7 +755,11 @@ static inline struct sock *__locate_name(const char *name,
+ 
+ 	/* Traverse the list of sockets in the specified hash slot to find a
+ 	   match. */
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,9,0))
++	sk_for_each(s, &linx_sockets_bound[hash]) {
++#else
+ 	sk_for_each(s, node, &linx_sockets_bound[hash]) {
++#endif
+ 		linx_check_sock(s);
+ 
+ /* If the length of the aname are the same, potential match was found. */
+@@ -1122,7 +1128,9 @@ int linx_info_sockets(struct linx_info_sockets *isockets,
+ 		      LINX_SPID __user * spids)
+ {
+ 	struct sock *sk;
++#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,9,0))
+ 	const struct hlist_node *node;
++#endif
+ 	int i, tot_sockets = 0, tot_sockets_tmp = 0, max_sockets;
+ 
+ 	LINX_ASSERT(isockets != NULL);
+@@ -1131,7 +1139,11 @@ int linx_info_sockets(struct linx_info_sockets *isockets,
+ 
+ 	read_lock_bh(&linx_socket_bound_unbound_lock);
+ 	/* Count the number of sockets the needs to be returned. */
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,9,0))
++	sk_for_each(sk, &linx_sockets_unbound) {
++#else
+ 	sk_for_each(sk, node, &linx_sockets_unbound) {
++#endif
+ 		if (linx_sk(sk)->type == LINX_TYPE_REMOTE && isockets->remote) {
+ 			tot_sockets_tmp++;
+ 		} else if (linx_sk(sk)->type == LINX_TYPE_LOCAL &&
+@@ -1156,7 +1168,11 @@ int linx_info_sockets(struct linx_info_sockets *isockets,
+ 
+ 		tot_sockets_tmp = 0;
+ 
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,9,0))
++		sk_for_each(sk, &linx_sockets_unbound) {
++#else
+ 		sk_for_each(sk, node, &linx_sockets_unbound) {
++#endif
+ 			LINX_SPID spid = linx_sock_to_spid(sk);
+ 			if (linx_sk(sk)->type == LINX_TYPE_REMOTE &&
+ 			    isockets->remote) {
+@@ -1197,7 +1213,11 @@ int linx_info_sockets(struct linx_info_sockets *isockets,
+ 	for (i = 0; i < LINX_HASH_SIZE; i++) {
+ 		tot_sockets_tmp = 0;
+ 		read_lock_bh(&linx_socket_bound_unbound_lock);
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,9,0))
++		sk_for_each(sk, &linx_sockets_bound[i]) {
++#else
+ 		sk_for_each(sk, node, &linx_sockets_bound[i]) {
++#endif
+ 			if (linx_sk(sk)->type == LINX_TYPE_REMOTE &&
+ 			    isockets->remote) {
+ 				tot_sockets_tmp++;
+@@ -1222,7 +1242,11 @@ int linx_info_sockets(struct linx_info_sockets *isockets,
+ 			}
+ 
+ 			tot_sockets_tmp = 0;
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,9,0))
++			sk_for_each(sk, &linx_sockets_bound[i]) {
++#else
+ 			sk_for_each(sk, node, &linx_sockets_bound[i]) {
++#endif
+ 				LINX_SPID spid = linx_sock_to_spid(sk);
+ 				if (linx_sk(sk)->type == LINX_TYPE_REMOTE &&
+ 				    isockets->remote) {
+-- 
+1.8.3.2
+

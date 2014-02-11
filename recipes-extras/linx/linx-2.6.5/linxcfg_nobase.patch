@@ -1,0 +1,38 @@
+From a3b3dc8117490ddfcc2081fca5ff663e4157a106 Mon Sep 17 00:00:00 2001
+From: jack zhang <jack.zhang@enea.com>
+Date: Mon, 17 Dec 2012 03:57:15 +0100
+Subject: [PATCH] LXCR-995 As an Enea sales person, I want LINX added to Enea
+ Linux 
+Signed-off-by: jack zhang <jack.zhang@enea.com>
+
+ Upstream-Status: Pending
+ For details, see LINXCR-1518
+---
+ linxcfg/Makefile.am |    4 +---
+ 1 files changed, 1 insertions(+), 3 deletions(-)
+
+diff --git a/linxcfg/Makefile.am b/linxcfg/Makefile.am
+index 9fc8e84..287c71b 100644
+--- a/linxcfg/Makefile.am
++++ b/linxcfg/Makefile.am
+@@ -24,16 +24,14 @@ dist_man1_MANS = \
+ 	$(LINXROOT)/doc/man1/mkcmclcon.1 \
+ 	$(LINXROOT)/doc/man1/rmcmclcon.1
+ 
+-include_HEADERS = \
++nobase_include_HEADERS = \
+ 	$(LINXROOT)/include/linxcfg.h \
+ 	$(LINXROOT)/include/linux/ethcm_db_ioctl.h \
+ 	$(LINXROOT)/include/linux/rlnh_db_ioctl.h \
+ 	$(LINXROOT)/include/linux/tcpcm_db_ioctl.h \
+ 	$(LINXROOT)/include/linux/shmcm_db_ioctl.h \
+-	$(LINXROOT)/include/linux/riocm_db_ioctl.h \
+ 	$(LINXROOT)/include/linux/cmcl_db_ioctl.h \
+ 	$(LINXROOT)/include/linux/riocm_db_ioctl.h \
+-	$(LINXROOT)/include/linux/cmcl_db_ioctl.h \
+ 	$(LINXROOT)/include/db_ioctl.h \
+ 	$(LINXROOT)/include/ethcm_db_ioctl.h \
+ 	$(LINXROOT)/include/rlnh_db_ioctl.h \
+-- 
+1.7.5.4
+
