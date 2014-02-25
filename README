@@ -7,10 +7,8 @@ Dependencies
 ------------
 This layer depends on:
 
-URI: git://github.com/openembedded/oe-core.git
-branch: master
-revision: HEAD
-prio: default
+URI: git://git.yoctoproject.org/poky
+branch: Same as meta-oel
 
 Maintenance
 -----------
