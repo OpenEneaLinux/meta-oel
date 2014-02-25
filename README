@@ -1,0 +1,36 @@
+meta-oel
+===================
+
+This is the distribution layer for Open Enea Linux.
+
+Dependencies
+------------
+This layer depends on:
+
+URI: git://github.com/openembedded/oe-core.git
+branch: master
+revision: HEAD
+prio: default
+
+Maintenance
+-----------
+
+Send pull requests, patches, comments or questions to openenealinux@lists.openenealinux.org
+Please note that this list should only be used for patches for meta-oel, and the oel git 
+repositories. 
+Bugfixes and additions for other layers should be sent to respective layers mailinglist, 
+usually denoted in the README file in that specific layer.
+
+
+Maintainers: David Nyström <david.c.nystrom@gmail.com>
+	     Jon Aldama <jon.aldama@enea.com>
+
+When sending single patches, please using something like:
+'git send-email -1 --to openenealinux@lists.openenealinux.org --subject-prefix=meta-oel][PATCH'
+
+License
+-------
+
+All metadata is MIT licensed unless otherwise stated. Source code included
+in tree for individual recipes is under the LICENSE stated in each recipe
+(.bb file) unless otherwise stated.
