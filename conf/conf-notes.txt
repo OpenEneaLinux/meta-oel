@@ -1,0 +1,11 @@
+Define your build machine via MACHINE, either in conf/local.conf or command-line.
+i.e. 
+MACHINE=p1025twr bitbake -k world
+
+Common targets are:
+    core-image-minimal
+    core-image-lsb
+    core-image-sato
+    -c populate_sdk core-image-minimal
+
+You can also run generated qemu images with a command like 'runqemu qemux86'
