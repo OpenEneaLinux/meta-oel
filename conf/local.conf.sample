@@ -163,7 +163,7 @@ SDKMACHINE ?= "x86_64"
 EXTRA_IMAGE_FEATURES += "debug-tweaks package-management eclipse-debug"
 
 # Default to basic connectivity packages
-IMAGE_INSTALL_append = " dhcp-client tcf-agent"
+IMAGE_INSTALL_append = " dhcp-client"
 
 #
 # Additional image features
